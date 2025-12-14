@@ -1,0 +1,46 @@
+{
+    "colors": {
+        "r": 0,
+        "g": 255,
+        "b": 255,
+        "black": "#0a0a0f",
+        "light_black": "#12121a",
+        "grey": "#1a1a2e",
+        "red": "#ff3366",
+        "green": "#00ff88",
+        "yellow": "#ffcc00",
+        "blue": "#00ccff",
+        "magenta": "#ff00ff",
+        "cyan": "#00ffff",
+        "white": "#e0e0e0",
+        "brightBlack": "#3a3a5a",
+        "brightRed": "#ff6699",
+        "brightGreen": "#66ffaa",
+        "brightYellow": "#ffdd66",
+        "brightBlue": "#66ddff",
+        "brightMagenta": "#ff66ff",
+        "brightCyan": "#66ffff",
+        "brightWhite": "#ffffff"
+    },
+    "cssvars": {
+        "font_main": "United Sans Medium",
+        "font_main_light": "United Sans Light"
+    },
+    "terminal": {
+        "fontFamily": "Fira Code",
+        "cursorStyle": "bar",
+        "cursorBlink": true,
+        "foreground": "#e0e0e0",
+        "background": "#0a0a0f",
+        "cursor": "#00ffff",
+        "cursorAccent": "#00ffff",
+        "selection": "rgba(0, 255, 255, 0.25)"
+    },
+    "globe": {
+        "base": "#1a1a2e",
+        "marker": "#00ffff",
+        "pin": "#ff3366",
+        "satellite": "#00ff88"
+    },
+    "injectCSS": "body{background:linear-gradient(135deg,#0a0a0f 0%,#12121a 50%,#0a0a0f 100%)!important}section{border-radius:4px;box-shadow:0 0 20px rgba(0,255,255,0.1),inset 0 0 30px rgba(0,255,255,0.02)!important;border:1px solid rgba(0,255,255,0.2)!important;background:rgba(18,18,26,0.85)!important}section>h3.title:first-child{background:linear-gradient(90deg,rgba(0,255,255,0.1),transparent)!important;border-bottom:1px solid rgba(0,255,255,0.3)!important;text-shadow:0 0 10px rgba(0,255,255,0.5)}section#main_shell{box-shadow:0 0 30px rgba(0,255,255,0.15),inset 0 0 50px rgba(0,255,255,0.03)!important}ul#main_shell_tabs>li{border-radius:3px 3px 0 0;transition:all 0.3s ease}ul#main_shell_tabs>li:hover{background:rgba(0,255,255,0.1);box-shadow:0 0 15px rgba(0,255,255,0.2)}ul#main_shell_tabs>li.active{background:linear-gradient(180deg,rgba(0,255,255,0.2),transparent)!important;box-shadow:0 -2px 10px rgba(0,255,255,0.3)}div.keyboard_key{border-radius:4px!important;transition:all 0.15s ease!important;box-shadow:0 2px 8px rgba(0,0,0,0.3)}div.keyboard_key:hover{box-shadow:0 0 15px rgba(0,255,255,0.4)!important;transform:translateY(-1px)}div.keyboard_key.active{box-shadow:0 0 20px rgba(0,255,255,0.6)!important;background:rgba(0,255,255,0.3)!important}::-webkit-scrollbar-thumb{border-radius:4px;background:linear-gradient(180deg,#00ffff,#00cccc)!important}"
+}

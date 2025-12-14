@@ -507,6 +507,9 @@ async function initUI() {
     await _delay(200);
 
     window.updateCheck = new UpdateChecker();
+
+    // Initialize AI Assistant
+    window.aiAssistant = new AIAssistant();
 }
 
 window.themeChanger = theme => {
