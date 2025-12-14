@@ -5,9 +5,123 @@ class AIAssistant {
         this.activeTab = 'guide';
         this.chatHistory = [];
         this.isLoading = false;
+        this.provider = null; // 'tgpt', 'ollama', or 'openrouter'
+        this.ollamaModel = process.env.OLLAMA_MODEL || 'llama3.2';
+        this.ollamaHost = process.env.OLLAMA_HOST || 'http://127.0.0.1:11434';
+        this.tgptPath = null; // Path to tgpt binary if found
+        this.tgptProvider = process.env.TGPT_PROVIDER || 'phind'; // tgpt's internal provider
         
         this._createOverlay();
         this._bindEvents();
+        this._detectProvider();
+        
+        // Auto-show AI assistant if env var is set (for demos/testing)
+        if (process.env.EDEX_AI_AUTOSHOW === '1') {
+            setTimeout(() => this.open(), 2000);
+        }
+    }
+
+    async _detectProvider() {
+        // Check for forced provider via env var
+        const forcedProvider = process.env.EDEX_AI_PROVIDER;
+        if (forcedProvider) {
+            this.provider = forcedProvider;
+            this._setStatus(`Using ${forcedProvider} (forced)`);
+            setTimeout(() => this._setStatus(''), 3000);
+            return;
+        }
+
+        // Check for OpenRouter API key first
+        const openrouterKey = process.env.OPENROUTER_API_KEY || (window.settings && window.settings.aiApiKey);
+        if (openrouterKey) {
+            this.provider = 'openrouter';
+            this._setStatus('Using OpenRouter API');
+            setTimeout(() => this._setStatus(''), 3000);
+            return;
+        }
+
+        // Try to detect Ollama
+        try {
+            const available = await this._checkOllama();
+            if (available) {
+                this.provider = 'ollama';
+                this._setStatus(`Using Ollama (${this.ollamaModel})`);
+                setTimeout(() => this._setStatus(''), 3000);
+                return;
+            }
+        } catch (e) {
+            // Ollama not available
+        }
+
+        // Try to detect tgpt
+        try {
+            const tgptAvailable = await this._checkTgpt();
+            if (tgptAvailable) {
+                this.provider = 'tgpt';
+                this._setStatus(`Using tgpt (${this.tgptProvider})`);
+                setTimeout(() => this._setStatus(''), 3000);
+                return;
+            }
+        } catch (e) {
+            // tgpt not available
+        }
+
+        this._setStatus('No AI provider found. Install tgpt, run Ollama, or set OPENROUTER_API_KEY.');
+    }
+
+    async _checkTgpt() {
+        const { exec } = require('child_process');
+        
+        return new Promise((resolve) => {
+            exec('which tgpt', { timeout: 2000 }, (error, stdout) => {
+                if (error || !stdout.trim()) {
+                    resolve(false);
+                } else {
+                    this.tgptPath = stdout.trim();
+                    resolve(true);
+                }
+            });
+        });
+    }
+
+    async _checkOllama() {
+        const http = require('http');
+        const url = require('url');
+        const parsed = url.parse(this.ollamaHost);
+        
+        return new Promise((resolve) => {
+            const req = http.request({
+                hostname: parsed.hostname,
+                port: parsed.port || 11434,
+                path: '/api/tags',
+                method: 'GET',
+                timeout: 1000
+            }, (res) => {
+                let data = '';
+                res.on('data', chunk => data += chunk);
+                res.on('end', () => {
+                    try {
+                        const result = JSON.parse(data);
+                        if (result.models && result.models.length > 0) {
+                            // Check if our preferred model exists
+                            const hasModel = result.models.some(m => m.name.startsWith(this.ollamaModel));
+                            if (!hasModel && result.models.length > 0) {
+                                // Use first available model
+                                this.ollamaModel = result.models[0].name;
+                            }
+                            resolve(true);
+                        } else {
+                            resolve(false);
+                        }
+                    } catch (e) {
+                        resolve(false);
+                    }
+                });
+            });
+            req.on('error', () => resolve(false));
+            req.on('timeout', () => { req.destroy(); resolve(false); });
+            req.end();
+        });
     }
 
     _createOverlay() {
@@ -49,7 +163,11 @@ class AIAssistant {
                         </div>
                         <div class="guide_section">
                             <h3>AI Chat</h3>
-                            <p>Switch to the AI Chat tab to ask questions, get coding help, or generate commands. Requires an API key configured in settings.</p>
+                            <p>Switch to the AI Chat tab to ask questions. Supports tgpt, Ollama (local), or OpenRouter (cloud).</p>
+                            <p><strong>tgpt:</strong> Install tgpt CLI for AI without API keys. Set TGPT_PROVIDER env var to choose provider (default: phind).</p>
+                            <p><strong>Ollama:</strong> Run Ollama locally on port 11434. Set OLLAMA_MODEL env var to choose model.</p>
+                            <p><strong>OpenRouter:</strong> Set OPENROUTER_API_KEY env var for cloud AI access.</p>
+                            <p><strong>Force provider:</strong> Set EDEX_AI_PROVIDER env var to force a specific provider (tgpt, ollama, openrouter).</p>
                         </div>
                     </div>
                     <div id="ai_chat_content" class="ai_content_panel">
@@ -201,16 +319,126 @@ class AIAssistant {
     }
 
     _setStatus(status) {
-        this.chatStatus.textContent = status;
+        if (this.chatStatus) {
+            this.chatStatus.textContent = status;
+        }
     }
 
     async _callAI(message) {
+        if (!this.provider) {
+            // Try to detect again
+            await this._detectProvider();
+        }
+
+        if (this.provider === 'tgpt') {
+            return this._callTgpt(message);
+        } else if (this.provider === 'ollama') {
+            return this._callOllama(message);
+        } else if (this.provider === 'openrouter') {
+            return this._callOpenRouter(message);
+        } else {
+            throw new Error('No AI provider available. Install tgpt, run Ollama, or set OPENROUTER_API_KEY.');
+        }
+    }
+
+    async _callTgpt(message) {
+        const { execFile } = require('child_process');
+        
+        return new Promise((resolve, reject) => {
+            const args = ['-q', '-w', '--provider', this.tgptProvider, message];
+            
+            execFile(this.tgptPath || 'tgpt', args, { 
+                timeout: 60000,
+                maxBuffer: 1024 * 1024 // 1MB buffer
+            }, (error, stdout, stderr) => {
+                if (error) {
+                    reject(new Error(`tgpt error: ${error.message}`));
+                } else if (stderr && stderr.trim()) {
+                    reject(new Error(`tgpt error: ${stderr}`));
+                } else {
+                    resolve(stdout.trim());
+                }
+            });
+        });
+    }
+
+    async _callOllama(message) {
+        const http = require('http');
+        const url = require('url');
+        const parsed = url.parse(this.ollamaHost);
+
+        const messages = [
+            {
+                role: 'system',
+                content: 'You are a helpful AI assistant integrated into eDEX-UI, a sci-fi terminal emulator. Help users with terminal commands, coding questions, system administration, and general queries. Keep responses concise and technical when appropriate. Format code blocks with triple backticks.'
+            },
+            ...this.chatHistory.filter(m => m.role !== 'error').slice(-10).map(m => ({
+                role: m.role,
+                content: m.content
+            })),
+            { role: 'user', content: message }
+        ];
+
+        return new Promise((resolve, reject) => {
+            const data = JSON.stringify({
+                model: this.ollamaModel,
+                messages: messages,
+                stream: false
+            });
+
+            const req = http.request({
+                hostname: parsed.hostname,
+                port: parsed.port || 11434,
+                path: '/api/chat',
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(data)
+                }
+            }, (res) => {
+                let responseData = '';
+                
+                res.on('data', (chunk) => {
+                    responseData += chunk;
+                });
+                
+                res.on('end', () => {
+                    try {
+                        const result = JSON.parse(responseData);
+                        if (result.error) {
+                            reject(new Error(result.error));
+                        } else if (result.message && result.message.content) {
+                            resolve(result.message.content);
+                        } else {
+                            reject(new Error('Invalid response format from Ollama'));
+                        }
+                    } catch (e) {
+                        reject(new Error('Failed to parse Ollama response'));
+                    }
+                });
+            });
+
+            req.on('error', (e) => {
+                reject(new Error(`Ollama request failed: ${e.message}`));
+            });
+
+            req.setTimeout(60000, () => {
+                req.destroy();
+                reject(new Error('Ollama request timeout'));
+            });
+
+            req.write(data);
+            req.end();
+        });
+    }
+
+    async _callOpenRouter(message) {
         const https = require('https');
         
-        const apiKey = process.env.OPENROUTER_API_KEY || window.settings.aiApiKey;
+        const apiKey = process.env.OPENROUTER_API_KEY || (window.settings && window.settings.aiApiKey);
         
         if (!apiKey) {
-            throw new Error('No API key configured. Set OPENROUTER_API_KEY environment variable or aiApiKey in settings.');
+            throw new Error('No OpenRouter API key configured.');
         }
 
         const messages = [
@@ -254,11 +482,11 @@ class AIAssistant {
                 
                 res.on('end', () => {
                     try {
-                        const parsed = JSON.parse(responseData);
-                        if (parsed.error) {
-                            reject(new Error(parsed.error.message || 'API error'));
-                        } else if (parsed.choices && parsed.choices[0]) {
-                            resolve(parsed.choices[0].message.content);
+                        const result = JSON.parse(responseData);
+                        if (result.error) {
+                            reject(new Error(result.error.message || 'API error'));
+                        } else if (result.choices && result.choices[0]) {
+                            resolve(result.choices[0].message.content);
                         } else {
                             reject(new Error('Invalid response format'));
                         }
@@ -306,4 +534,5 @@ class AIAssistant {
     }
 }
 
-module.exports = { AIAssistant };
+// Make AIAssistant available globally for script tag loading
+window.AIAssistant = AIAssistant;
