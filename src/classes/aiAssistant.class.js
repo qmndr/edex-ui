@@ -5,11 +5,11 @@ class AIAssistant {
         this.activeTab = 'guide';
         this.chatHistory = [];
         this.isLoading = false;
-        this.provider = null; // 'tgpt', 'ollama', or 'openrouter'
+        this.provider = null; // 'duckduckgo', 'phind', 'ollama', or 'openrouter'
         this.ollamaModel = process.env.OLLAMA_MODEL || 'llama3.2';
         this.ollamaHost = process.env.OLLAMA_HOST || 'http://127.0.0.1:11434';
-        this.tgptPath = null; // Path to tgpt binary if found
-        this.tgptProvider = process.env.TGPT_PROVIDER || 'phind'; // tgpt's internal provider
+        this.ddgVqd = null; // DuckDuckGo VQD token for session
+        this.ddgModel = process.env.DDG_MODEL || 'gpt-4o-mini'; // DuckDuckGo model
         
         this._createOverlay();
         this._bindEvents();
@@ -53,34 +53,98 @@ class AIAssistant {
             // Ollama not available
         }
 
-        // Try to detect tgpt
+        // Try DuckDuckGo AI (free, no API key needed)
         try {
-            const tgptAvailable = await this._checkTgpt();
-            if (tgptAvailable) {
-                this.provider = 'tgpt';
-                this._setStatus(`Using tgpt (${this.tgptProvider})`);
+            const ddgAvailable = await this._checkDuckDuckGo();
+            if (ddgAvailable) {
+                this.provider = 'duckduckgo';
+                this._setStatus(`Using DuckDuckGo AI (${this.ddgModel})`);
                 setTimeout(() => this._setStatus(''), 3000);
                 return;
             }
         } catch (e) {
-            // tgpt not available
+            // DuckDuckGo not available
         }
 
-        this._setStatus('No AI provider found. Install tgpt, run Ollama, or set OPENROUTER_API_KEY.');
+        // Try Phind AI (free, no API key needed)
+        try {
+            const phindAvailable = await this._checkPhind();
+            if (phindAvailable) {
+                this.provider = 'phind';
+                this._setStatus('Using Phind AI');
+                setTimeout(() => this._setStatus(''), 3000);
+                return;
+            }
+        } catch (e) {
+            // Phind not available
+        }
+
+        this._setStatus('No AI provider found. Run Ollama locally or set OPENROUTER_API_KEY.');
     }
 
-    async _checkTgpt() {
-        const { exec } = require('child_process');
+    async _checkDuckDuckGo() {
+        const https = require('https');
         
         return new Promise((resolve) => {
-            exec('which tgpt', { timeout: 2000 }, (error, stdout) => {
-                if (error || !stdout.trim()) {
-                    resolve(false);
-                } else {
-                    this.tgptPath = stdout.trim();
+            const options = {
+                hostname: 'duckduckgo.com',
+                port: 443,
+                path: '/duckchat/v1/status',
+                method: 'GET',
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:127.0) Gecko/20100101 Firefox/127.0',
+                    'Accept': 'text/event-stream',
+                    'Accept-Language': 'en-US;q=0.7,en;q=0.3',
+                    'Referer': 'https://duckduckgo.com/',
+                    'x-vqd-accept': '1',
+                    'Cache-Control': 'no-store'
+                },
+                timeout: 5000
+            };
+
+            const req = https.request(options, (res) => {
+                // Get the VQD token from response headers
+                const vqd = res.headers['x-vqd-4'];
+                if (vqd) {
+                    this.ddgVqd = vqd;
                     resolve(true);
+                } else {
+                    resolve(false);
                 }
+                res.resume(); // Consume response data
             });
+
+            req.on('error', () => resolve(false));
+            req.on('timeout', () => { req.destroy(); resolve(false); });
+            req.end();
+        });
+    }
+
+    async _checkPhind() {
+        const https = require('https');
+        
+        return new Promise((resolve) => {
+            const options = {
+                hostname: 'https.extension.phind.com',
+                port: 443,
+                path: '/agent/',
+                method: 'OPTIONS',
+                headers: {
+                    'User-Agent': '',
+                    'Accept': '*/*'
+                },
+                timeout: 5000
+            };
+
+            const req = https.request(options, (res) => {
+                // If we get any response, Phind is available
+                resolve(res.statusCode < 500);
+                res.resume();
+            });
+
+            req.on('error', () => resolve(false));
+            req.on('timeout', () => { req.destroy(); resolve(false); });
+            req.end();
         });
     }
 
@@ -163,11 +227,12 @@ class AIAssistant {
                         </div>
                         <div class="guide_section">
                             <h3>AI Chat</h3>
-                            <p>Switch to the AI Chat tab to ask questions. Supports tgpt, Ollama (local), or OpenRouter (cloud).</p>
-                            <p><strong>tgpt:</strong> Install tgpt CLI for AI without API keys. Set TGPT_PROVIDER env var to choose provider (default: phind).</p>
-                            <p><strong>Ollama:</strong> Run Ollama locally on port 11434. Set OLLAMA_MODEL env var to choose model.</p>
-                            <p><strong>OpenRouter:</strong> Set OPENROUTER_API_KEY env var for cloud AI access.</p>
-                            <p><strong>Force provider:</strong> Set EDEX_AI_PROVIDER env var to force a specific provider (tgpt, ollama, openrouter).</p>
+                            <p>Switch to the AI Chat tab to ask questions. AI works out of the box with no API keys required!</p>
+                            <p><strong>Built-in (no API key):</strong> DuckDuckGo AI and Phind are integrated directly - just start chatting!</p>
+                            <p><strong>Ollama:</strong> Run Ollama locally on port 11434 for private, local AI. Set OLLAMA_MODEL env var to choose model.</p>
+                            <p><strong>OpenRouter:</strong> Set OPENROUTER_API_KEY env var for cloud AI access with more models.</p>
+                            <p><strong>Priority:</strong> OpenRouter > Ollama > DuckDuckGo > Phind (first available is used).</p>
+                            <p><strong>Force provider:</strong> Set EDEX_AI_PROVIDER env var to force a specific provider (duckduckgo, phind, ollama, openrouter).</p>
                         </div>
                     </div>
                     <div id="ai_chat_content" class="ai_content_panel">
@@ -330,35 +395,203 @@ class AIAssistant {
             await this._detectProvider();
         }
 
-        if (this.provider === 'tgpt') {
-            return this._callTgpt(message);
+        if (this.provider === 'duckduckgo') {
+            return this._callDuckDuckGo(message);
+        } else if (this.provider === 'phind') {
+            return this._callPhind(message);
         } else if (this.provider === 'ollama') {
             return this._callOllama(message);
         } else if (this.provider === 'openrouter') {
             return this._callOpenRouter(message);
         } else {
-            throw new Error('No AI provider available. Install tgpt, run Ollama, or set OPENROUTER_API_KEY.');
+            throw new Error('No AI provider available. Run Ollama locally or set OPENROUTER_API_KEY.');
         }
     }
 
-    async _callTgpt(message) {
-        const { execFile } = require('child_process');
+    async _callDuckDuckGo(message) {
+        const https = require('https');
         
+        // Refresh VQD token if needed
+        if (!this.ddgVqd) {
+            const available = await this._checkDuckDuckGo();
+            if (!available) {
+                throw new Error('DuckDuckGo AI is not available');
+            }
+        }
+
+        const systemPrompt = 'You are a helpful AI assistant integrated into eDEX-UI, a sci-fi terminal emulator. Help users with terminal commands, coding questions, system administration, and general queries. Keep responses concise and technical when appropriate.';
+
+        const messages = [
+            { role: 'system', content: systemPrompt },
+            ...this.chatHistory.filter(m => m.role !== 'error').slice(-10).map(m => ({
+                role: m.role,
+                content: m.content
+            })),
+            { role: 'user', content: message }
+        ];
+
         return new Promise((resolve, reject) => {
-            const args = ['-q', '-w', '--provider', this.tgptProvider, message];
-            
-            execFile(this.tgptPath || 'tgpt', args, { 
-                timeout: 60000,
-                maxBuffer: 1024 * 1024 // 1MB buffer
-            }, (error, stdout, stderr) => {
-                if (error) {
-                    reject(new Error(`tgpt error: ${error.message}`));
-                } else if (stderr && stderr.trim()) {
-                    reject(new Error(`tgpt error: ${stderr}`));
-                } else {
-                    resolve(stdout.trim());
-                }
+            const data = JSON.stringify({
+                model: this.ddgModel,
+                messages: messages
             });
+
+            const options = {
+                hostname: 'duckduckgo.com',
+                port: 443,
+                path: '/duckchat/v1/chat',
+                method: 'POST',
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:127.0) Gecko/20100101 Firefox/127.0',
+                    'Accept': 'text/event-stream',
+                    'Accept-Language': 'en-US;q=0.7,en;q=0.3',
+                    'Referer': 'https://duckduckgo.com/',
+                    'Content-Type': 'application/json',
+                    'Origin': 'https://duckduckgo.com',
+                    'x-vqd-4': this.ddgVqd,
+                    'Cache-Control': 'no-store'
+                }
+            };
+
+            const req = https.request(options, (res) => {
+                let responseData = '';
+                let fullResponse = '';
+                
+                // Update VQD token from response
+                const newVqd = res.headers['x-vqd-4'];
+                if (newVqd) {
+                    this.ddgVqd = newVqd;
+                }
+
+                res.on('data', (chunk) => {
+                    responseData += chunk.toString();
+                    
+                    // Parse SSE data
+                    const lines = responseData.split('\n');
+                    responseData = lines.pop() || ''; // Keep incomplete line
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ') && line.length > 6) {
+                            const jsonStr = line.substring(6);
+                            if (jsonStr === '[DONE]') continue;
+                            try {
+                                const parsed = JSON.parse(jsonStr);
+                                if (parsed.message) {
+                                    fullResponse += parsed.message;
+                                }
+                            } catch (e) {
+                                // Ignore parse errors for incomplete chunks
+                            }
+                        }
+                    }
+                });
+
+                res.on('end', () => {
+                    if (fullResponse) {
+                        resolve(fullResponse);
+                    } else {
+                        reject(new Error('No response from DuckDuckGo AI'));
+                    }
+                });
+            });
+
+            req.on('error', (e) => {
+                reject(new Error(`DuckDuckGo request failed: ${e.message}`));
+            });
+
+            req.setTimeout(60000, () => {
+                req.destroy();
+                reject(new Error('DuckDuckGo request timeout'));
+            });
+
+            req.write(data);
+            req.end();
+        });
+    }
+
+    async _callPhind(message) {
+        const https = require('https');
+
+        const systemPrompt = 'You are a helpful AI assistant integrated into eDEX-UI, a sci-fi terminal emulator. Help users with terminal commands, coding questions, system administration, and general queries. Keep responses concise and technical when appropriate.';
+
+        const messageHistory = [
+            { role: 'system', content: systemPrompt },
+            ...this.chatHistory.filter(m => m.role !== 'error').slice(-10).map(m => ({
+                role: m.role,
+                content: m.content
+            })),
+            { role: 'user', content: message }
+        ];
+
+        return new Promise((resolve, reject) => {
+            const data = JSON.stringify({
+                additional_extension_context: '',
+                allow_magic_buttons: true,
+                is_vscode_extension: true,
+                message_history: messageHistory,
+                requested_model: 'Phind-70B',
+                user_input: message
+            });
+
+            const options = {
+                hostname: 'https.extension.phind.com',
+                port: 443,
+                path: '/agent/',
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'User-Agent': '',
+                    'Accept': '*/*',
+                    'Accept-Encoding': 'identity'
+                }
+            };
+
+            const req = https.request(options, (res) => {
+                let responseData = '';
+                let fullResponse = '';
+
+                res.on('data', (chunk) => {
+                    responseData += chunk.toString();
+                    
+                    // Parse SSE data
+                    const lines = responseData.split('\n');
+                    responseData = lines.pop() || '';
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const jsonStr = line.substring(6);
+                            try {
+                                const parsed = JSON.parse(jsonStr);
+                                if (parsed.choices && parsed.choices[0] && parsed.choices[0].delta && parsed.choices[0].delta.content) {
+                                    fullResponse += parsed.choices[0].delta.content;
+                                }
+                            } catch (e) {
+                                // Ignore parse errors
+                            }
+                        }
+                    }
+                });
+
+                res.on('end', () => {
+                    if (fullResponse) {
+                        resolve(fullResponse);
+                    } else {
+                        reject(new Error('No response from Phind AI'));
+                    }
+                });
+            });
+
+            req.on('error', (e) => {
+                reject(new Error(`Phind request failed: ${e.message}`));
+            });
+
+            req.setTimeout(60000, () => {
+                req.destroy();
+                reject(new Error('Phind request timeout'));
+            });
+
+            req.write(data);
+            req.end();
         });
     }
 
