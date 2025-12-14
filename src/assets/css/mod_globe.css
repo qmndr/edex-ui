@@ -91,3 +91,74 @@ div#mod_globe.offline canvas {
 div#mod_globe.offline h3 {
     opacity: 1;
 }
+
+/* Globe Mode Selector */
+div#mod_globe_mode_selector {
+    display: flex;
+    gap: 0.5vh;
+    margin-top: 0.5vh;
+    margin-bottom: 0.5vh;
+    z-index: 10;
+}
+
+.globe_mode_btn {
+    background: rgba(var(--color_r), var(--color_g), var(--color_b), 0.1);
+    border: 1px solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.3);
+    color: rgba(var(--color_r), var(--color_g), var(--color_b), 0.7);
+    font-family: var(--font_main);
+    font-size: 1.1vh;
+    padding: 0.4vh 0.8vh;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    letter-spacing: 0.1vh;
+}
+
+.globe_mode_btn:hover {
+    background: rgba(var(--color_r), var(--color_g), var(--color_b), 0.2);
+    color: rgb(var(--color_r), var(--color_g), var(--color_b));
+}
+
+.globe_mode_btn.active {
+    background: rgba(var(--color_r), var(--color_g), var(--color_b), 0.3);
+    color: rgb(var(--color_r), var(--color_g), var(--color_b));
+    border-color: rgba(var(--color_r), var(--color_g), var(--color_b), 0.6);
+}
+
+/* Globe Info Panel */
+div#mod_globe_info_panel {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5vh;
+    width: 98%;
+    margin-top: 0.5vh;
+    min-height: 2vh;
+}
+
+.globe_info_item {
+    display: flex;
+    flex-direction: column;
+    background: rgba(var(--color_r), var(--color_g), var(--color_b), 0.05);
+    border: 1px solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.15);
+    padding: 0.3vh 0.6vh;
+    flex: 1;
+    min-width: 45%;
+}
+
+.globe_info_item.full {
+    min-width: 100%;
+    flex: 100%;
+}
+
+.globe_info_label {
+    font-family: var(--font_main_light);
+    font-size: 0.9vh;
+    color: rgba(var(--color_r), var(--color_g), var(--color_b), 0.5);
+    letter-spacing: 0.1vh;
+}
+
+.globe_info_value {
+    font-family: var(--font_main);
+    font-size: 1.1vh;
+    color: rgb(var(--color_r), var(--color_g), var(--color_b));
+    letter-spacing: 0.05vh;
+}
