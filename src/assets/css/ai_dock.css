@@ -1,0 +1,257 @@
+/* AI Dock - Bottom panel replacement for keyboard */
+section#ai_dock {
+    display: flex;
+    flex-direction: column;
+    width: 55.5vw;
+    height: 32vh;
+    position: relative;
+    top: -0.925vh;
+    background: rgba(var(--color_black), 0.3);
+    border: 1px solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.3);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+section#ai_dock.hidden {
+    display: none;
+}
+
+/* AI Dock Header */
+#ai_dock_header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5vh 1vw;
+    background: rgba(var(--color_r), var(--color_g), var(--color_b), 0.1);
+    border-bottom: 1px solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.3);
+    min-height: 3.5vh;
+}
+
+#ai_dock_header h3 {
+    margin: 0;
+    font-size: 1.8vh;
+    color: rgb(var(--color_r), var(--color_g), var(--color_b));
+    font-family: var(--font_main);
+    letter-spacing: 0.2em;
+}
+
+#ai_dock_provider {
+    font-size: 1.4vh;
+    color: rgba(var(--color_r), var(--color_g), var(--color_b), 0.7);
+    font-family: var(--font_main_light);
+}
+
+#ai_dock_toggle {
+    background: transparent;
+    border: 1px solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.5);
+    color: rgb(var(--color_r), var(--color_g), var(--color_b));
+    padding: 0.3vh 0.8vw;
+    font-size: 1.2vh;
+    cursor: pointer;
+    font-family: var(--font_main);
+    letter-spacing: 0.1em;
+    transition: all 0.2s ease;
+}
+
+#ai_dock_toggle:hover {
+    background: rgba(var(--color_r), var(--color_g), var(--color_b), 0.2);
+}
+
+/* AI Dock Messages Area */
+#ai_dock_messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1vh 1vw;
+    display: flex;
+    flex-direction: column;
+    gap: 1vh;
+}
+
+#ai_dock_messages::-webkit-scrollbar {
+    width: 4px;
+}
+
+#ai_dock_messages::-webkit-scrollbar-track {
+    background: rgba(var(--color_r), var(--color_g), var(--color_b), 0.1);
+}
+
+#ai_dock_messages::-webkit-scrollbar-thumb {
+    background: rgba(var(--color_r), var(--color_g), var(--color_b), 0.4);
+    border-radius: 2px;
+}
+
+/* Message Styles */
+.ai_dock_message {
+    display: flex;
+    flex-direction: column;
+    max-width: 85%;
+    padding: 0.8vh 1vw;
+    border-radius: 4px;
+    font-size: 1.4vh;
+    line-height: 1.6;
+    font-family: var(--font_main_light);
+}
+
+.ai_dock_message.user {
+    align-self: flex-end;
+    background: rgba(var(--color_r), var(--color_g), var(--color_b), 0.2);
+    border: 1px solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.4);
+}
+
+.ai_dock_message.assistant {
+    align-self: flex-start;
+    background: rgba(var(--color_r), var(--color_g), var(--color_b), 0.05);
+    border: 1px solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.2);
+}
+
+.ai_dock_message.error {
+    align-self: center;
+    background: rgba(255, 0, 0, 0.1);
+    border: 1px solid rgba(255, 0, 0, 0.3);
+    color: var(--color_red);
+}
+
+.ai_dock_message .role {
+    font-size: 1.1vh;
+    color: rgba(var(--color_r), var(--color_g), var(--color_b), 0.6);
+    margin-bottom: 0.3vh;
+    font-family: var(--font_main);
+    letter-spacing: 0.1em;
+}
+
+.ai_dock_message .content {
+    color: rgb(var(--color_grey));
+}
+
+.ai_dock_message .content code {
+    background: rgba(var(--color_r), var(--color_g), var(--color_b), 0.1);
+    padding: 0.1vh 0.3vw;
+    border-radius: 2px;
+    font-family: var(--font_mono);
+    font-size: 1.3vh;
+}
+
+.ai_dock_message .content pre {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 0.5vh 0.5vw;
+    border-radius: 4px;
+    overflow-x: auto;
+    margin: 0.5vh 0;
+}
+
+.ai_dock_message .content pre code {
+    background: transparent;
+    padding: 0;
+}
+
+/* AI Dock Input Area */
+#ai_dock_input_area {
+    display: flex;
+    gap: 0.5vw;
+    padding: 0.8vh 1vw;
+    background: rgba(var(--color_r), var(--color_g), var(--color_b), 0.05);
+    border-top: 1px solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.2);
+}
+
+#ai_dock_input {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.3);
+    border-radius: 4px;
+    padding: 0.8vh 1vw;
+    color: rgb(var(--color_grey));
+    font-family: var(--font_main_light);
+    font-size: 1.4vh;
+    resize: none;
+    min-height: 3vh;
+    max-height: 8vh;
+}
+
+#ai_dock_input:focus {
+    outline: none;
+    border-color: rgba(var(--color_r), var(--color_g), var(--color_b), 0.6);
+}
+
+#ai_dock_input::placeholder {
+    color: rgba(var(--color_r), var(--color_g), var(--color_b), 0.4);
+}
+
+#ai_dock_send {
+    background: rgba(var(--color_r), var(--color_g), var(--color_b), 0.2);
+    border: 1px solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.5);
+    color: rgb(var(--color_r), var(--color_g), var(--color_b));
+    padding: 0.8vh 1.5vw;
+    font-size: 1.3vh;
+    cursor: pointer;
+    font-family: var(--font_main);
+    letter-spacing: 0.1em;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+#ai_dock_send:hover {
+    background: rgba(var(--color_r), var(--color_g), var(--color_b), 0.4);
+}
+
+#ai_dock_send:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Quick Actions */
+#ai_dock_actions {
+    display: flex;
+    gap: 0.5vw;
+    padding: 0.5vh 1vw;
+    border-top: 1px solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.1);
+    flex-wrap: wrap;
+}
+
+.ai_dock_action {
+    background: transparent;
+    border: 1px solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.3);
+    color: rgba(var(--color_r), var(--color_g), var(--color_b), 0.7);
+    padding: 0.3vh 0.6vw;
+    font-size: 1.1vh;
+    cursor: pointer;
+    font-family: var(--font_main_light);
+    border-radius: 2px;
+    transition: all 0.2s ease;
+}
+
+.ai_dock_action:hover {
+    background: rgba(var(--color_r), var(--color_g), var(--color_b), 0.1);
+    color: rgb(var(--color_r), var(--color_g), var(--color_b));
+}
+
+/* Status indicator */
+#ai_dock_status {
+    font-size: 1.2vh;
+    color: rgba(var(--color_r), var(--color_g), var(--color_b), 0.6);
+    padding: 0.3vh 1vw;
+    text-align: center;
+    min-height: 1.8vh;
+}
+
+/* Animation for loading */
+@keyframes ai_dock_pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+}
+
+#ai_dock_status.loading {
+    animation: ai_dock_pulse 1.5s ease-in-out infinite;
+}
+
+/* Keyboard hidden mode - expand terminal */
+body.keyboard-hidden #main_shell {
+    height: calc(100vh - 10vh) !important;
+}
+
+body.keyboard-hidden section#keyboard {
+    display: none !important;
+}
+
+body.ai-dock-mode section#keyboard {
+    display: none !important;
+}

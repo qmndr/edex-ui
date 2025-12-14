@@ -369,12 +369,17 @@ async function initUI() {
     document.body.innerHTML += `
     <section id="filesystem" style="width: 0px;" class="${window.settings.hideDotfiles ? "hideDotfiles" : ""} ${window.settings.fsListView ? "list-view" : ""}">
     </section>
-    <section id="keyboard" style="opacity:0;">
+    <section id="keyboard" style="opacity:0;${window.settings.bottomPanel === 'ai' ? 'display:none;' : ''}">
+    </section>
+    <section id="ai_dock" class="${window.settings.bottomPanel !== 'ai' ? 'hidden' : ''}" style="opacity:0;">
     </section>`;
     window.keyboard = new Keyboard({
         layout: path.join(keyboardsDir, settings.keyboard+".json"),
         container: "keyboard"
     });
+    
+    // Initialize AI Dock
+    window.aiDock = new AIDock("ai_dock");
 
     await _delay(10);
 
@@ -395,13 +400,23 @@ async function initUI() {
     greeter.setAttribute("style", "opacity: 1;");
 
     document.getElementById("filesystem").setAttribute("style", "");
-    document.getElementById("keyboard").setAttribute("style", "");
-    document.getElementById("keyboard").setAttribute("class", "animation_state_1");
+    
+    // Show keyboard or AI dock based on settings
+    if (window.settings.bottomPanel === 'ai') {
+        document.getElementById("ai_dock").setAttribute("style", "");
+        document.getElementById("keyboard").style.display = "none";
+        document.body.classList.add("ai-dock-mode");
+    } else {
+        document.getElementById("keyboard").setAttribute("style", "");
+        document.getElementById("keyboard").setAttribute("class", "animation_state_1");
+    }
     window.audioManager.keyboard.play();
 
     await _delay(100);
 
-    document.getElementById("keyboard").setAttribute("class", "animation_state_1 animation_state_2");
+    if (window.settings.bottomPanel !== 'ai') {
+        document.getElementById("keyboard").setAttribute("class", "animation_state_1 animation_state_2");
+    }
 
     await _delay(1000);
 
@@ -409,7 +424,9 @@ async function initUI() {
 
     await _delay(100);
 
-    document.getElementById("keyboard").setAttribute("class", "");
+    if (window.settings.bottomPanel !== 'ai') {
+        document.getElementById("keyboard").setAttribute("class", "");
+    }
 
     await _delay(400);
 
@@ -526,6 +543,60 @@ window.remakeKeyboard = layout => {
         container: "keyboard"
     });
     ipc.send("setKbOverride", layout);
+};
+
+// Toggle between keyboard and AI dock modes
+// Modes: 'keyboard', 'ai', 'hidden'
+window.toggleBottomPanel = (mode) => {
+    const keyboard = document.getElementById("keyboard");
+    const aiDock = document.getElementById("ai_dock");
+    
+    // If no mode specified, cycle through modes
+    if (!mode) {
+        const currentMode = window.settings.bottomPanel || 'keyboard';
+        if (currentMode === 'keyboard') {
+            mode = 'ai';
+        } else if (currentMode === 'ai') {
+            mode = 'hidden';
+        } else {
+            mode = 'keyboard';
+        }
+    }
+    
+    // Apply the mode
+    if (mode === 'keyboard') {
+        keyboard.style.display = "";
+        keyboard.classList.remove("hidden");
+        aiDock.classList.add("hidden");
+        document.body.classList.remove("ai-dock-mode", "keyboard-hidden");
+    } else if (mode === 'ai') {
+        keyboard.style.display = "none";
+        aiDock.classList.remove("hidden");
+        document.body.classList.add("ai-dock-mode");
+        document.body.classList.remove("keyboard-hidden");
+        if (window.aiDock) window.aiDock.show();
+    } else if (mode === 'hidden') {
+        keyboard.style.display = "none";
+        aiDock.classList.add("hidden");
+        document.body.classList.add("keyboard-hidden");
+        document.body.classList.remove("ai-dock-mode");
+    }
+    
+    // Save the setting
+    window.settings.bottomPanel = mode;
+    window.writeSettingsFile();
+    
+    // Update toggle button text if it exists
+    const toggleBtn = document.getElementById("ai_dock_toggle");
+    if (toggleBtn) {
+        if (mode === 'ai') {
+            toggleBtn.textContent = "KEYBOARD";
+        } else {
+            toggleBtn.textContent = "AI DOCK";
+        }
+    }
+    
+    window.audioManager.folder.play();
 };
 
 window.focusShellTab = number => {
@@ -798,6 +869,16 @@ window.openSettings = async () => {
                             <option>${!window.settings.experimentalFeatures}</option>
                         </select></td>
                     </tr>
+                    <tr>
+                        <td>bottomPanel</td>
+                        <td>Bottom panel mode: keyboard, ai (AI dock), or hidden (F2 to toggle)</td>
+                        <td><select id="settingsEditor-bottomPanel">
+                            <option>${window.settings.bottomPanel || 'keyboard'}</option>
+                            ${(window.settings.bottomPanel || 'keyboard') !== 'keyboard' ? '<option>keyboard</option>' : ''}
+                            ${(window.settings.bottomPanel || 'keyboard') !== 'ai' ? '<option>ai</option>' : ''}
+                            ${(window.settings.bottomPanel || 'keyboard') !== 'hidden' ? '<option>hidden</option>' : ''}
+                        </select></td>
+                    </tr>
                 </table>
                 <h6 id="settingsEditorStatus">Loaded values from memory</h6>
                 <br>`,
@@ -849,7 +930,8 @@ window.writeSettingsFile = () => {
         hideDotfiles: (document.getElementById("settingsEditor-hideDotfiles").value === "true"),
         fsListView: (document.getElementById("settingsEditor-fsListView").value === "true"),
         experimentalGlobeFeatures: (document.getElementById("settingsEditor-experimentalGlobeFeatures").value === "true"),
-        experimentalFeatures: (document.getElementById("settingsEditor-experimentalFeatures").value === "true")
+        experimentalFeatures: (document.getElementById("settingsEditor-experimentalFeatures").value === "true"),
+        bottomPanel: document.getElementById("settingsEditor-bottomPanel") ? document.getElementById("settingsEditor-bottomPanel").value : (window.settings.bottomPanel || 'keyboard')
     };
 
     Object.keys(window.settings).forEach(key => {
